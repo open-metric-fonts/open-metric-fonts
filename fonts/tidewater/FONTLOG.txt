@@ -8,5 +8,5 @@ They are modified versions of these SIL Open Font License fonts:
 
 - Mulish: Copyright 2016 The Mulish Project Authors (https://github.com/googlefonts/mulish)
 
-Styles: 6. Version 1.000.
+Styles: 6. Version 1.001.
 Reserved Font Names of the base fonts are not used in these fonts' names.

@@ -69,10 +69,16 @@ jobs:
         with:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
+      - name: Update npm
+        run: npm install -g npm@11
       - name: Publish
+        # npm limits how fast new packages can be created, so publishes are
+        # spaced out and a rate-limited publish is retried after a pause.
+        # Versions that already exist are skipped, so a rerun resumes.
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          set -u
           for dir in npm/*/; do
             name=$(node -p "require('./$dir/package.json').name")
             version=$(node -p "require('./$dir/package.json').version")
@@ -80,5 +86,16 @@ jobs:
               echo "$name@$version already published"
               continue
             fi
-            (cd "$dir" && npm publish --provenance --access public)
+            for attempt in 1 2 3 4 5 6 7 8; do
+              if (cd "$dir" && npm publish --provenance --access public 2>&1 | tee /tmp/publish.log); then
+                break
+              fi
+              if grep -q "E429" /tmp/publish.log && [ "$attempt" -lt 8 ]; then
+                echo "rate limited; waiting 10 minutes (attempt $attempt)"
+                sleep 600
+              else
+                exit 1
+              fi
+            done
+            sleep 30
           done

@@ -9,5 +9,5 @@ They are modified versions of these SIL Open Font License fonts:
 - Libre Bodoni: Copyright 2012 The Libre Bodoni Project Authors (https://github.com/googlefonts/Libre-Bodoni/)
 - Noto Serif: Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)
 
-Styles: 11. Version 1.000.
+Styles: 11. Version 1.001.
 Reserved Font Names of the base fonts are not used in these fonts' names.

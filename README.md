@@ -128,22 +128,23 @@ Every release on the [Releases page](https://github.com/open-metric-fonts/open-m
 
 ### On the web (npm and CDN)
 
-Each family is an npm package, `@open-metric-fonts/<name>`, with WOFF2 files and CSS in the style of Fontsource:
+Each family is an npm package, `@open-metric-fonts/<name>`, with WOFF2 files and CSS in the style of Fontsource. Fonts are split by alphabet, so browsers download only the parts a page uses:
 
 ```bash
 npm install @open-metric-fonts/overlook
 ```
 
 ```js
-import "@open-metric-fonts/overlook";  // every style
+import "@open-metric-fonts/overlook";           // every style, split by alphabet
+import "@open-metric-fonts/overlook/full.css";  // or one complete file per style
 ```
 
 The same packages are served by jsDelivr and unpkg. Pin the version and use the `integrity` hash, so the browser rejects anything that differs from the release:
 
 <!-- cdn:start -->
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@open-metric-fonts/overlook@1.0.0/index.css"
-      integrity="sha384-eJIsixtMs7+MdQK4W8SVFXqyFcAc18ikQ4hWerGRHbULWoKvk1qsaP3o12nYxBWy" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@open-metric-fonts/overlook@1.0.1/index.css"
+      integrity="sha384-zMuRPn7n8mS+NoL9nL0zWUAxfIi60g1hbH/W4cutlyc/+TJRJyF7nVYDy3m2J/b+" crossorigin="anonymous">
 ```
 <!-- cdn:end -->
 
@@ -155,15 +156,15 @@ Release zips are built by GitHub Actions from the tagged commit, with a signed b
 
 ```bash
 sha256sum -c SHA256SUMS.txt --ignore-missing
-gh attestation verify open-metric-fonts-1.0.0.zip --repo open-metric-fonts/open-metric-fonts
+gh attestation verify open-metric-fonts-1.0.1.zip --repo open-metric-fonts/open-metric-fonts
 ```
 
 npm packages are published with npm provenance, shown on each package's npm page.
 
 ## Licenses
 
-- Fonts: [SIL Open Font License 1.1](OFL.txt). Each derived font also carries its base font's copyright notice.
-- Packaging script in `scripts/`: [MIT](LICENSE-CODE.txt).
+- Fonts: [SIL Open Font License 1.1](LICENSE). Each derived font also carries its base font's copyright notice.
+- Packaging script in `scripts/`: [MIT](scripts/LICENSE).
 
 Microsoft font names (Aptos, Grandview, Bahnschrift, Sitka, …) and the Monotype and other foundry names listed here are trademarks of their owners. They are used only to say which font each replacement is compatible with. This project is not affiliated with or endorsed by Microsoft, Monotype or any other foundry, and does not contain any of their font files or glyph outlines.
 

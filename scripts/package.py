@@ -5,7 +5,11 @@ For every folder fonts/<package>/ this writes
   dist/npm/<package>/          npm package @open-metric-fonts/<package>
       package.json, README.md, LICENSE (OFL), FONTLOG.txt
       files/<face>.woff2       one WOFF2 per style
+      files/<face>-<alphabet>.woff2   the same style split by alphabet (latin,
+                               latin-ext, greek, cyrillic, ...), with unicode-range
       index.css                @font-face rules for every style in the package
+                               (split files: browsers fetch only what a page uses)
+      full.css                 the same, one complete file per style
       <family>.css             one family only (e.g. overlook-display.css)
       <family>-<weight>[-italic].css   one style only
   dist/zips/<package>-<version>.zip      ttf/, web/ (the npm files), licenses,
@@ -38,12 +42,13 @@ from xml.etree import ElementTree
 from fontTools.ttLib import TTFont
 
 def _root():
-    """The repository root: the nearest parent folder with fonts/ and OFL.txt."""
+    """The repository root: the nearest parent folder with fonts/ and the OFL licence."""
     d = os.path.dirname(os.path.abspath(__file__))
-    while not (os.path.isdir(os.path.join(d, "fonts")) and os.path.isfile(os.path.join(d, "OFL.txt"))):
+    while not (os.path.isdir(os.path.join(d, "fonts")) and
+               any(os.path.isfile(os.path.join(d, n)) for n in ("LICENSE", "OFL.txt"))):
         parent = os.path.dirname(d)
         if parent == d:
-            raise SystemExit("cannot find the repository root (fonts/ and OFL.txt)")
+            raise SystemExit("cannot find the repository root (fonts/ and LICENSE)")
         d = parent
     return d
 
@@ -56,6 +61,78 @@ ZIP_DATE = (2026, 1, 1, 0, 0, 0)  # fixed timestamp inside zips, so they are rep
 STYLE_WORDS = {"Thin", "Hairline", "ExtraLight", "UltraLight", "Light", "SemiLight", "Regular", "Normal",
                "Book", "Roman", "Medium", "SemiBold", "Semibold", "DemiBold", "Demi", "Bold", "ExtraBold",
                "UltraBold", "Heavy", "Black", "ExtraBlack", "Italic", "Oblique"}
+
+
+# Alphabet subsets (the ranges Google Fonts and Fontsource use). Browsers only
+# download the files whose unicode-range a page actually uses.
+SUBSETS = [
+    ("latin", "U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, "
+              "U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD"),
+    ("latin-ext", "U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, "
+                  "U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, "
+                  "U+2113, U+2C60-2C7F, U+A720-A7FF"),
+    ("vietnamese", "U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, "
+                   "U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB"),
+    ("greek", "U+0370-0377, U+037A-037F, U+0384-038A, U+038C, U+038E-03A1, U+03A3-03FF"),
+    ("greek-ext", "U+1F00-1FFF"),
+    ("cyrillic", "U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116"),
+    ("cyrillic-ext", "U+0460-052F, U+1C80-1C8A, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F"),
+]
+
+
+def parse_ranges(text):
+    out = set()
+    for part in text.split(","):
+        a, _, b = part.strip()[2:].partition("-")
+        out.update(range(int(a, 16), int(b or a, 16) + 1))
+    return out
+
+
+def format_ranges(cps):
+    cps, out, i = sorted(cps), [], 0
+    while i < len(cps):
+        j = i
+        while j + 1 < len(cps) and cps[j + 1] == cps[j] + 1:
+            j += 1
+        out.append(f"U+{cps[i]:04X}" + (f"-{cps[j]:04X}" if j > i else ""))
+        i = j + 1
+    return ", ".join(out)
+
+
+def write_face_files(path, out_dir, stem):
+    """Full WOFF2 plus one WOFF2 per alphabet subset -> [(subset, file, unicode-range)]."""
+    from fontTools import subset
+    full = TTFont(path)
+    full.flavor = "woff2"
+    full.save(os.path.join(out_dir, f"{stem}.woff2"))
+    cmap = set(TTFont(path)["cmap"].getBestCmap())
+    covered, out = set(), []
+    pieces = [(name, parse_ranges(r)) for name, r in SUBSETS] + [("other", None)]
+    for name, cps in pieces:
+        want = (cmap - covered) if cps is None else (cmap & cps)
+        if cps is not None:
+            covered |= cps
+        if not want:
+            continue
+        opts = subset.Options()
+        opts.layout_features = ["*"]
+        opts.name_IDs = ["*"]
+        opts.name_languages = ["*"]
+        opts.name_legacy = True
+        opts.notdef_outline = True
+        opts.glyph_names = False
+        opts.legacy_kern = True
+        opts.hinting = True
+        opts.flavor = "woff2"
+        font = TTFont(path)
+        sub = subset.Subsetter(opts)
+        sub.populate(unicodes=sorted(want))
+        sub.subset(font)
+        fname = f"{stem}-{name}.woff2"
+        subset.save_font(font, os.path.join(out_dir, fname), opts)
+        rng = format_ranges(want) if cps is None else dict(SUBSETS)[name]
+        out.append((name, fname, rng))
+    return out
 
 
 def slug(text):
@@ -94,17 +171,15 @@ def faces(pkg_dir):
     return out
 
 
-def font_face(family, face, local=None):
-    src = f"url(./files/{face['file']}) format('woff2')"
-    if local:
-        src = f"local('{local}'), " + src
-    return ("@font-face {\n"
+def font_face(family, face, file, unicode_range=None, comment=None):
+    return ((f"/* {comment} */\n" if comment else "") + "@font-face {\n"
             f"  font-family: '{family}';\n"
             f"  font-style: {'italic' if face['italic'] else 'normal'};\n"
             f"  font-weight: {face['weight']};\n"
             "  font-display: swap;\n"
-            f"  src: {src};\n"
-            "}\n")
+            f"  src: url(./files/{file}) format('woff2');\n"
+            + (f"  unicode-range: {unicode_range};\n" if unicode_range else "")
+            + "}\n")
 
 
 def target_face_name(target_legacy, face):
@@ -115,7 +190,8 @@ def target_face_name(target_legacy, face):
 def build_package(pkg, version, out_root):
     pkg_dir = os.path.join(ROOT, "fonts", pkg)
     fs = faces(pkg_dir)
-    want = f"Version {version.split('.')[0]}.{''.join(version.split('.')[1:]).ljust(3, '0')[:3]}"
+    major, minor, patch = (int(x) for x in version.split("."))
+    want = f"Version {major}.{minor}{patch:02d}"   # 1.0.1 -> Version 1.001
     bad = sorted({f["version"] for f in fs if f["version"] != want})
     if bad:
         raise SystemExit(f"{pkg}: fonts say {bad}, release is {version} ({want})")
@@ -137,13 +213,17 @@ def build_package(pkg, version, out_root):
     out = os.path.join(out_root, pkg)
     os.makedirs(os.path.join(out, "files"))
     css = {}
-    for f in fs:
-        f["font"].flavor = "woff2"
-        f["font"].save(os.path.join(out, "files", f["file"]))
-        rule = font_face(f["family"], f)
-        css.setdefault("index.css", []).append(rule)
-        css.setdefault(f"{slug(f['family'])}.css", []).append(rule)
-        css.setdefault(f"{slug(f['family'])}-{f['weight']}{'-italic' if f['italic'] else ''}.css", []).append(rule)
+    from concurrent.futures import ProcessPoolExecutor
+    stems = [f["file"][:-len(".woff2")] for f in fs]
+    with ProcessPoolExecutor() as pool:
+        parts = list(pool.map(write_face_files, [f["path"] for f in fs],
+                              [os.path.join(out, "files")] * len(fs), stems))
+    for f, stem, subsets in zip(fs, stems, parts):
+        rules = "".join(font_face(f["family"], f, file, rng, comment=name) for name, file, rng in subsets)
+        css.setdefault("index.css", []).append(rules)
+        css.setdefault(f"{slug(f['family'])}.css", []).append(rules)
+        css.setdefault(f"{slug(f['family'])}-{f['weight']}{'-italic' if f['italic'] else ''}.css", []).append(rules)
+        css.setdefault("full.css", []).append(font_face(f["family"], f, f"{stem}.woff2"))
     for name, rules in css.items():
         with open(os.path.join(out, name), "w", encoding="utf-8", newline="\n") as fh:
             fh.write("\n".join(rules))
@@ -206,11 +286,14 @@ npm install {SCOPE}/{pkg}
 ```js
 import "{SCOPE}/{pkg}";             // every style
 import "{SCOPE}/{pkg}/{slug(first)}-400.css";  // or one style
+import "{SCOPE}/{pkg}/full.css";             // or one complete file per style
 ```
 
 ```css
 body {{ font-family: "{first}", sans-serif; }}
 ```
+
+Each style is split by alphabet (Latin, Latin Extended, Greek, Cyrillic, Vietnamese, …) with `unicode-range`, so a browser downloads only the parts a page uses. `full.css` uses one complete file per style instead.
 
 ## CDN (pinned version, with Subresource Integrity)
 
@@ -290,6 +373,7 @@ npm install {SCOPE}/overlook
 ```
 
 - `index.css`: every style in the package. `<family>.css`: one family. `<family>-<weight>[-italic].css`: one style.
+- Each style is split by alphabet with `unicode-range`, so browsers download only what a page uses (an English page needs only the Latin file). `full.css` uses one complete file per style instead.
 
 ## Security
 
@@ -343,7 +427,8 @@ def main(argv):
         results.append(build_package(pkg, version, npm_root))
         dest = stage_package(pkg, os.path.join(npm_root, pkg), stage)
         make_zip(os.path.join(zip_root, f"{pkg}-{version}.zip"), [(dest, pkg)])
-    shutil.copy(os.path.join(ROOT, "OFL.txt"), stage)
+    lic = next(n for n in ("LICENSE", "OFL.txt") if os.path.isfile(os.path.join(ROOT, n)))
+    shutil.copy(os.path.join(ROOT, lic), os.path.join(stage, "LICENSE"))
     with open(os.path.join(ROOT, "README.md"), "rb") as fh:
         readme = fh.read()
     with open(os.path.join(stage, "README.md"), "wb") as fh:
