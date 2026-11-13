@@ -1,0 +1,84 @@
+# Release: on a version tag (v1.0.0), package the committed fonts/, attest the
+# zips, create a DRAFT GitHub release, and publish the npm packages with
+# provenance. Fonts are not rebuilt here; the release is exactly what is in
+# fonts/ at the tagged commit.
+#
+# Setup (once): npm organization "open-metric-fonts", an npm automation token
+# stored as the NPM_TOKEN secret of the "npm" environment, and (recommended)
+# required reviewers on that environment so each publish waits for approval.
+name: release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write        # create the draft release
+      id-token: write        # sign the build attestation
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.12"
+      - name: Install packaging tools
+        run: pip install "fonttools[woff]==4.55.3" "brotli==1.1.0"
+      - name: Package
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          python scripts/package.py "$VERSION"
+          # The SRI hashes published in docs/web.md must match what is released.
+          git diff --exit-code -- docs/web.md README.md
+      - name: Attest zips
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: dist/zips/*.zip
+      - name: Draft GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --draft --verify-tag \
+            --title "open-metric-fonts $GITHUB_REF_NAME" \
+            --notes "Fonts, web fonts and checksums for $GITHUB_REF_NAME. Verify a download with \`sha256sum -c SHA256SUMS.txt\` and \`gh attestation verify <zip> --repo $GITHUB_REPOSITORY\`." \
+            dist/zips/*.zip dist/SHA256SUMS.txt dist/SRI.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: npm-packages
+          path: dist/npm/
+          if-no-files-found: error
+
+  npm:
+    needs: package
+    runs-on: ubuntu-latest
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write        # npm provenance
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: npm-packages
+          path: npm
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for dir in npm/*/; do
+            name=$(node -p "require('./$dir/package.json').name")
+            version=$(node -p "require('./$dir/package.json').version")
+            if npm view "$name@$version" version >/dev/null 2>&1; then
+              echo "$name@$version already published"
+              continue
+            fi
+            (cd "$dir" && npm publish --provenance --access public)
+          done

@@ -1,0 +1,16 @@
+FONTLOG for the fonts in almanac/
+
+These fonts are metric-compatible with fonts shipped with Microsoft Office/Windows
+(the same character widths), so documents keep their line and page breaks.
+They contain no glyph outlines or other font data files from those fonts.
+
+They are modified versions of these SIL Open Font License fonts:
+
+- Gelasio: Copyright 2022 The Gelasio Project Authors (https://github.com/SorkinType/Gelasio)
+- Noto Serif: Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)
+- NotoSansMath: Copyright 2022 The Noto Project Authors (https://github.com/notofonts)
+- NotoSansSymbols: Copyright 2022 The Noto Project Authors (https://github.com/notofonts)
+- NotoSansMono: Copyright 2022 The Noto Project Authors (https://github.com/notofonts)
+
+Styles: 1. Version 1.000.
+Reserved Font Names of the base fonts are not used in these fonts' names.

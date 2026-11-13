@@ -1,0 +1,20 @@
+FONTLOG for the fonts in pitlane/
+
+These fonts are metric-compatible with fonts shipped with Microsoft Office/Windows
+(the same character widths), so documents keep their line and page breaks.
+They contain no glyph outlines or other font data files from those fonts.
+
+They are modified versions of these SIL Open Font License fonts:
+
+- Saira: Copyright 2020 The Saira Project Authors (https://github.com/Omnibus-Type/Saira)
+- Noto Sans: Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)
+- NotoSansArmenian: Copyright 2022 The Noto Project Authors (https://github.com/notofonts)
+- NotoSansArabic: Copyright 2022 The Noto Project Authors (https://github.com/notofonts)
+- NotoSansBengali: Copyright 2022 The Noto Project Authors (https://github.com/notofonts)
+- NotoSansGujarati: Copyright 2022 The Noto Project Authors (https://github.com/notofonts)
+- NotoSansTamil: Copyright 2022 The Noto Project Authors (https://github.com/notofonts)
+- NotoSansThai: Copyright 2022 The Noto Project Authors (https://github.com/notofonts)
+- NotoSansKhmer: Copyright 2022 The Noto Project Authors (https://github.com/notofonts)
+
+Styles: 7. Version 1.000.
+Reserved Font Names of the base fonts are not used in these fonts' names.

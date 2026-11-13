@@ -1,0 +1,7 @@
+* text=auto
+*.conf text eol=lf
+*.yml text eol=lf
+docs/web.md text eol=lf
+*.ttf binary
+*.woff2 binary
+*.zip binary

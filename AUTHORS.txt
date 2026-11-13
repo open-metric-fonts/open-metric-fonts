@@ -1,0 +1,11 @@
+# This is the list of copyright holders of the Open Metric Fonts project,
+# referred to in the fonts' copyright notices as "The Open Metric Fonts Authors".
+#
+# The fonts are modified versions of other SIL Open Font License fonts; the
+# copyright holders of those base fonts are named in each font's copyright
+# notice and in fonts/<family>/OFL.txt.
+#
+# Names should be added as:
+#   Name or Organization <email address>
+
+The Open Metric Fonts maintainers (https://github.com/open-metric-fonts)
