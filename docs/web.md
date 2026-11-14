@@ -1,6 +1,6 @@
 # Web fonts and npm packages
 
-Every font folder is published to npm as `@open-metric-fonts/<name>` (WOFF2 files and CSS), which also makes it available from the jsDelivr and unpkg CDNs. The same files are in each release zip under `web/` for self-hosting. This page is generated for version 1.0.1.
+Every font folder is published to npm as `@open-metric-fonts/<name>` (WOFF2 files and CSS), which also makes it available from the jsDelivr and unpkg CDNs. The same files are in each release zip under `web/`, and every family's web files are in one folder in `open-metric-fonts-web-1.0.1.zip` for self-hosting (with `all.css` and `fonts.json`, below). This page is generated for version 1.0.1.
 
 ## Use
 
@@ -17,11 +17,20 @@ npm install @open-metric-fonts/overlook
 - `index.css`: every style in the package. `<family>.css`: one family. `<family>-<weight>[-italic].css`: one style.
 - Each style is split by alphabet with `unicode-range`, so browsers download only what a page uses (an English page needs only the Latin file). `full.css` uses one complete file per style instead.
 
+## Self-hosting every family
+
+`open-metric-fonts-web-1.0.1.zip` on the release page has every family's web files in one folder:
+
+- `all.css` loads every family (split by alphabet, so browsers fetch only what a page uses); `full.css` uses one complete file per style; `<package>/index.css` loads one family.
+- `fonts.json` lists, for each font family name a document may ask for, the family, weight and style in `all.css` that matches it, e.g. `"Grandview"` with `"Bold": {"family": "Overlook", "weight": 700, "style": "normal"}`. Apps that display documents can use it to draw text in our fonts when the original font is not installed.
+
+Copy the folder to your server and link `all.css`; nothing is loaded from other sites.
+
 ## Security
 
 - **Pin a version.** npm versions are immutable, so `@1.0.1` always serves the same bytes. Avoid unpinned or `@latest` URLs in production.
 - **Use the `integrity` attribute.** Browsers refuse a stylesheet whose hash differs. The CSS only references font files of the same pinned version.
-- **Self-host if you can.** Download the release zip, check it against `SHA256SUMS.txt` and the build attestation (see the README), and serve `web/` from your own domain.
+- **Self-host if you can.** Download the web zip, check it against `SHA256SUMS.txt` and the build attestation (see the README), and serve it from your own domain.
 - npm packages are published from GitHub Actions with npm provenance, which links each package version to the commit and workflow that built it.
 
 ## Packages

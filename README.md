@@ -120,6 +120,8 @@ Every release on the [Releases page](https://github.com/open-metric-fonts/open-m
 - `fontconfig/` and `libreoffice/`: files that make documents asking for the Microsoft font use ours
 - `OFL.txt` and `FONTLOG.txt`
 
+For websites and web apps there is also `open-metric-fonts-web-<version>.zip`: every family's web files in one folder, with `all.css` (every family), `full.css` and `fonts.json`. `fonts.json` lists which of our families, weights and styles to use for each font name a document may ask for, so an app that displays documents can draw them in our fonts without the originals installed. See [docs/web.md](docs/web.md#self-hosting-every-family).
+
 ### Installing
 
 - **Windows/macOS:** install the `.ttf` files from `ttf/` (or `fonts/<family>/` in this repository). Use them directly, or map the Microsoft names to them in apps that support font replacement (LibreOffice, below).

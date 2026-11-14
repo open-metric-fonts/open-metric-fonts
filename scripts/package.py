@@ -15,6 +15,9 @@ For every folder fonts/<package>/ this writes
   dist/zips/<package>-<version>.zip      ttf/, web/ (the npm files), licenses,
                                          fontconfig/ and libreoffice/ files
   dist/zips/open-metric-fonts-<version>.zip   every package in one zip
+  dist/zips/open-metric-fonts-web-<version>.zip   web files of every package in one
+                               folder: all.css, full.css, fonts.json (which family is
+                               compatible with which font name), <package>/
   dist/SHA256SUMS.txt          checksums of every zip
   dist/SRI.txt                 Subresource Integrity hash of every CSS file
   docs/web.md                  package list with CDN links and SRI hashes
@@ -254,7 +257,23 @@ def build_package(pkg, version, out_root):
     sri = {name: sri_hash(os.path.join(out, name)) for name in sorted(css)}
     with open(os.path.join(out, "README.md"), "w", encoding="utf-8", newline="\n") as fh:
         fh.write(package_readme(pkg, version, families, targets, fs, sri))
-    return dict(pkg=pkg, families=families, targets=targets, styles=len(fs), sri=sri)
+    mapping = {}
+    for f in fs:
+        target = legacy_alias.get(f["legacy"])
+        if not target:
+            raise SystemExit(f"{pkg}: no compatible family recorded for {f['legacy']}")
+        # The style slot documents select: Word's bold and italic buttons.
+        sel = f["font"]["OS/2"].fsSelection
+        slot = " ".join(w for w, on in (("Bold", sel & 0x20), ("Italic", sel & 1)) if on) or "Regular"
+        faces_ = mapping.setdefault(target, {"package": pkg, "faces": {}})["faces"]
+        if slot in faces_:
+            raise SystemExit(f"{pkg}: two faces of {target} are both {slot}")
+        faces_[slot] = {
+            "family": f["family"], "weight": f["weight"], "style": "italic" if f["italic"] else "normal"}
+    for m in mapping.values():
+        order = ["Regular", "Bold", "Italic", "Bold Italic"]
+        m["faces"] = {k: m["faces"][k] for k in order if k in m["faces"]}
+    return dict(pkg=pkg, families=families, targets=targets, styles=len(fs), sri=sri, mapping=mapping)
 
 
 def sri_hash(path):
@@ -349,6 +368,88 @@ def stage_package(pkg, npm_dir, stage_root):
     return dest
 
 
+WEB_README = """# Open Metric Fonts {version}: web fonts
+
+Every family in one folder, for serving from your own site (no CDN needed).
+
+- `all.css`: @font-face rules for every family. Each style is split by alphabet with
+  `unicode-range`, so browsers download only the files a page uses.
+- `full.css`: the same, with one complete file per style.
+- `<package>/`: one family's files and CSS, the same as the npm package
+  `@open-metric-fonts/<package>` (use `<package>/index.css` to load just that family).
+- `fonts.json`: which of our families is compatible with which font name, for apps that
+  open documents asking for the original fonts (see below).
+- `LICENSE`: SIL Open Font License 1.1. Each family's `FONTLOG.txt` is in its folder.
+
+## fonts.json
+
+```json
+{{
+  "version": "{version}",
+  "fonts": {{
+    "Grandview": {{
+      "package": "overlook",
+      "faces": {{
+        "Regular": {{ "family": "Overlook", "weight": 400, "style": "normal" }},
+        "Bold":    {{ "family": "Overlook", "weight": 700, "style": "normal" }}
+      }}
+    }}
+  }}
+}}
+```
+
+Keys of `fonts` are font family names as documents use them (the Windows family name,
+e.g. "Grandview Display" or "Bahnschrift SemiBold SemiCondensed"). Keys of `faces` are
+that family's styles as documents select them (Regular, Bold, Italic, Bold Italic). Each
+face gives the CSS `font-family`, `font-weight` and `font-style` to draw it with, from
+`all.css`.
+
+Source: {repo}
+"""
+
+
+def write_web_bundle(results, npm_root, version, zip_root):
+    """One zip with every package's web files, all.css, full.css and fonts.json."""
+    root = f"open-metric-fonts-web-{version}"
+    entries = []   # (arcname, bytes)
+    all_css, full_css, fonts = [], [], {}
+    for r in results:
+        pkg_dir = os.path.join(npm_root, r["pkg"])
+        for dirpath, _, files in sorted(os.walk(pkg_dir)):
+            for name in sorted(files):
+                if name in ("package.json", "README.md"):
+                    continue
+                full = os.path.join(dirpath, name)
+                rel = os.path.relpath(full, pkg_dir).replace(os.sep, "/")
+                with open(full, "rb") as fh:
+                    entries.append((f"{r['pkg']}/{rel}", fh.read()))
+        for name, out in (("index.css", all_css), ("full.css", full_css)):
+            with open(os.path.join(pkg_dir, name), encoding="utf-8") as fh:
+                css = fh.read().replace("url(./files/", f"url(./{r['pkg']}/files/")
+            out.append(f"/* {SCOPE}/{r['pkg']} */\n{css}")
+        for target, m in r["mapping"].items():
+            if target in fonts:
+                raise SystemExit(f"{target} is mapped by both {fonts[target]['package']} and {r['pkg']}")
+            fonts[target] = m
+    data = {"version": version, "fonts": dict(sorted(fonts.items()))}
+    with open(os.path.join(ROOT, "LICENSE" if os.path.isfile(os.path.join(ROOT, "LICENSE")) else "OFL.txt"), "rb") as fh:
+        lic = fh.read()
+    entries += [
+        ("all.css", "\n".join(all_css).encode()),
+        ("full.css", "\n".join(full_css).encode()),
+        ("fonts.json", (json.dumps(data, indent=2) + "\n").encode()),
+        ("LICENSE", lic),
+        ("README.md", WEB_README.format(version=version, repo=REPO).encode()),
+    ]
+    with zipfile.ZipFile(os.path.join(zip_root, f"{root}.zip"), "w") as zf:
+        for arc, blob in sorted(entries):
+            info = zipfile.ZipInfo(f"{root}/{arc}", ZIP_DATE)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            zf.writestr(info, blob)
+    return len(fonts)
+
+
 def write_web_doc(results, version):
     rows = []
     for r in results:
@@ -359,7 +460,7 @@ def write_web_doc(results, version):
             sri_rows.append(f"| `{SCOPE}/{r['pkg']}@{version}/{name}` | `{h}` |")
     doc = f"""# Web fonts and npm packages
 
-Every font folder is published to npm as `{SCOPE}/<name>` (WOFF2 files and CSS), which also makes it available from the jsDelivr and unpkg CDNs. The same files are in each release zip under `web/` for self-hosting. This page is generated for version {version}.
+Every font folder is published to npm as `{SCOPE}/<name>` (WOFF2 files and CSS), which also makes it available from the jsDelivr and unpkg CDNs. The same files are in each release zip under `web/`, and every family's web files are in one folder in `open-metric-fonts-web-{version}.zip` for self-hosting (with `all.css` and `fonts.json`, below). This page is generated for version {version}.
 
 ## Use
 
@@ -375,11 +476,20 @@ npm install {SCOPE}/overlook
 - `index.css`: every style in the package. `<family>.css`: one family. `<family>-<weight>[-italic].css`: one style.
 - Each style is split by alphabet with `unicode-range`, so browsers download only what a page uses (an English page needs only the Latin file). `full.css` uses one complete file per style instead.
 
+## Self-hosting every family
+
+`open-metric-fonts-web-{version}.zip` on the release page has every family's web files in one folder:
+
+- `all.css` loads every family (split by alphabet, so browsers fetch only what a page uses); `full.css` uses one complete file per style; `<package>/index.css` loads one family.
+- `fonts.json` lists, for each font family name a document may ask for, the family, weight and style in `all.css` that matches it, e.g. `"Grandview"` with `"Bold": {{"family": "Overlook", "weight": 700, "style": "normal"}}`. Apps that display documents can use it to draw text in our fonts when the original font is not installed.
+
+Copy the folder to your server and link `all.css`; nothing is loaded from other sites.
+
 ## Security
 
 - **Pin a version.** npm versions are immutable, so `@{version}` always serves the same bytes. Avoid unpinned or `@latest` URLs in production.
 - **Use the `integrity` attribute.** Browsers refuse a stylesheet whose hash differs. The CSS only references font files of the same pinned version.
-- **Self-host if you can.** Download the release zip, check it against `SHA256SUMS.txt` and the build attestation (see the README), and serve `web/` from your own domain.
+- **Self-host if you can.** Download the web zip, check it against `SHA256SUMS.txt` and the build attestation (see the README), and serve it from your own domain.
 - npm packages are published from GitHub Actions with npm provenance, which links each package version to the commit and workflow that built it.
 
 ## Packages
@@ -446,6 +556,7 @@ def main(argv):
                 with open(full, "rb") as fh:
                     zf.writestr(info, fh.read())
     shutil.rmtree(stage)
+    mapped = write_web_bundle(results, npm_root, version, zip_root)
     with open(os.path.join(dist, "SHA256SUMS.txt"), "w", encoding="utf-8", newline="\n") as fh:
         for z in sorted(os.listdir(zip_root)):
             with open(os.path.join(zip_root, z), "rb") as zfh:
@@ -458,7 +569,8 @@ def main(argv):
         write_web_doc(results, version)
         write_readme_cdn(results, version)
     total = sum(r["styles"] for r in results)
-    print(f"{len(results)} packages, {total} styles; zips, SHA256SUMS.txt and SRI.txt in dist/")
+    print(f"{len(results)} packages, {total} styles, {mapped} compatible family names; "
+          "zips, SHA256SUMS.txt and SRI.txt in dist/")
     return 0
 
 
