@@ -270,6 +270,13 @@ def build_package(pkg, version, out_root):
             raise SystemExit(f"{pkg}: two faces of {target} are both {slot}")
         faces_[slot] = {
             "family": f["family"], "weight": f["weight"], "style": "italic" if f["italic"] else "normal"}
+    # Typographic family names above optical sizes ("Sitka" over Sitka Small ...
+    # Banner) have no face of their own; documents that use them get the Text size.
+    for target in sorted(set(legacy_alias.values()) - set(mapping)):
+        base = mapping.get(f"{target} Text")
+        if not base:
+            raise SystemExit(f"{pkg}: {target} has no faces and no '{target} Text' to stand for it")
+        mapping[target] = json.loads(json.dumps(base))
     for m in mapping.values():
         order = ["Regular", "Bold", "Italic", "Bold Italic"]
         m["faces"] = {k: m["faces"][k] for k in order if k in m["faces"]}
@@ -399,7 +406,8 @@ Every family in one folder, for serving from your own site (no CDN needed).
 ```
 
 Keys of `fonts` are font family names as documents use them (the Windows family name,
-e.g. "Grandview Display" or "Bahnschrift SemiBold SemiCondensed"). Keys of `faces` are
+e.g. "Grandview Display" or "Bahnschrift SemiBold SemiCondensed"). A family name over
+several optical sizes ("Sitka", "Walbaum") gives the Text size. Keys of `faces` are
 that family's styles as documents select them (Regular, Bold, Italic, Bold Italic). Each
 face gives the CSS `font-family`, `font-weight` and `font-style` to draw it with, from
 `all.css`.
