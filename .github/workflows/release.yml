@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install packaging tools
-        run: pip install "fonttools[woff]==4.55.3" "brotli==1.1.0"
+        run: pip install "fonttools[woff]==4.63.0" "brotli==1.2.1"
       - name: Package
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -70,7 +70,7 @@ jobs:
           node-version: "22"
           registry-url: "https://registry.npmjs.org"
       - name: Update npm
-        run: npm install -g npm@11
+        run: npm install -g npm@11.21.2
       - name: Publish
         # npm limits how fast new packages can be created, so publishes are
         # spaced out and a rate-limited publish is retried after a pause.
