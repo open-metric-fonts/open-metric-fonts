@@ -6,6 +6,8 @@ Open-source fonts that are **metric-compatible** with the fonts shipped in Micro
 
 This is the same approach as Liberation (Arial/Times/Courier), Carlito (Calibri), Caladea (Cambria) and Selawik (Segoe UI), extended to the rest of the Office font set.
 
+Build and test automation was developed with the help of an AI coding assistant. All letter shapes come from the openly licensed base fonts listed below.
+
 ## Fonts
 
 392 fonts in 81 families, all under the SIL Open Font License.
