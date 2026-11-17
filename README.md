@@ -165,6 +165,10 @@ gh attestation verify open-metric-fonts-1.0.1.zip --repo open-metric-fonts/open-
 
 npm packages are published with npm provenance, shown on each package's npm page.
 
+## Known differences
+
+Letter widths and spacing match, but a few things can still differ: Bold applied on top of a SemiBold cloud font in Word, private-use characters no open font has, and letter shapes. See [docs/known-differences.md](docs/known-differences.md) for the cause of each and what it affects.
+
 ## Licenses
 
 - Fonts: [SIL Open Font License 1.1](LICENSE). Each derived font also carries its base font's copyright notice.
