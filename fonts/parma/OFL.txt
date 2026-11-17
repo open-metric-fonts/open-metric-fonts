@@ -1,5 +1,4 @@
 Copyright 2012 The Libre Bodoni Project Authors (https://github.com/googlefonts/Libre-Bodoni/)
-Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)
 Copyright 2026 The Open Metric Fonts Authors
 
 This Font Software is licensed under the SIL Open Font License, Version 1.1.
