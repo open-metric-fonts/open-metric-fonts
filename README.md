@@ -147,7 +147,7 @@ The same packages are served by jsDelivr and unpkg. Pin the version and use the 
 
 <!-- cdn:start -->
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@open-metric-fonts/overlook@1.0.1/index.css"
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@open-metric-fonts/overlook@1.1.0/index.css"
       integrity="sha384-zMuRPn7n8mS+NoL9nL0zWUAxfIi60g1hbH/W4cutlyc/+TJRJyF7nVYDy3m2J/b+" crossorigin="anonymous">
 ```
 <!-- cdn:end -->
