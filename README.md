@@ -147,7 +147,7 @@ The same packages are served by jsDelivr and unpkg. Pin the version and use the 
 
 <!-- cdn:start -->
 ```html
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@open-metric-fonts/overlook@1.0.1/index.css"
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@open-metric-fonts/overlook@1.1.0/index.css"
       integrity="sha384-zMuRPn7n8mS+NoL9nL0zWUAxfIi60g1hbH/W4cutlyc/+TJRJyF7nVYDy3m2J/b+" crossorigin="anonymous">
 ```
 <!-- cdn:end -->
@@ -160,10 +160,14 @@ Release zips are built by GitHub Actions from the tagged commit, with a signed b
 
 ```bash
 sha256sum -c SHA256SUMS.txt --ignore-missing
-gh attestation verify open-metric-fonts-1.0.1.zip --repo open-metric-fonts/open-metric-fonts
+gh attestation verify open-metric-fonts-1.1.0.zip --repo open-metric-fonts/open-metric-fonts
 ```
 
 npm packages are published with npm provenance, shown on each package's npm page.
+
+## Known differences
+
+Letter widths and spacing match, but a few things can still differ: Bold applied on top of a SemiBold cloud font in Word, private-use characters no open font has, and letter shapes. See [docs/known-differences.md](docs/known-differences.md) for the cause of each and what it affects.
 
 ## Licenses
 

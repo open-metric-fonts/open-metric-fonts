@@ -1,5 +1,4 @@
 Copyright 2020 The Inter Project Authors (https://github.com/rsms/inter)
-Copyright 2022 The Noto Project Authors (https://github.com/notofonts/latin-greek-cyrillic)
 Copyright 2022 The Noto Project Authors (https://github.com/notofonts)
 Copyright 2026 The Open Metric Fonts Authors
 

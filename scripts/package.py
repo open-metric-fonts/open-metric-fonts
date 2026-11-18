@@ -526,6 +526,8 @@ def write_readme_cdn(results, version):
     tag = link_tag("overlook", version, "index.css", r["sri"]["index.css"])
     block = f"{start}\n```html\n{tag}\n```\n{end}"
     text = text[:text.index(start)] + block + text[text.index(end) + len(end):]
+    # The download-checking example names the release zip.
+    text = re.sub(r"open-metric-fonts-\d+\.\d+\.\d+\.zip", f"open-metric-fonts-{version}.zip", text)
     with open(path, "w", encoding="utf-8", newline="\n") as fh:
         fh.write(text)
 
