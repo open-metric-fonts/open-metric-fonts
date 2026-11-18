@@ -3,9 +3,11 @@
 # provenance. Fonts are not rebuilt here; the release is exactly what is in
 # fonts/ at the tagged commit.
 #
-# Setup (once): npm organization "open-metric-fonts", an npm automation token
-# stored as the NPM_TOKEN secret of the "npm" environment, and (recommended)
-# required reviewers on that environment so each publish waits for approval.
+# Setup (once): npm organization "open-metric-fonts"; on every package a trusted
+# publisher for this repository, workflow file release.yml and environment "npm"
+# (npm trust github <package> --file release.yml --repo <owner/repo> --env npm
+# --allow-publish); and (recommended) required reviewers on the "npm" environment
+# so each publish waits for approval. No npm token is stored anywhere.
 name: release
 
 on:
@@ -75,8 +77,8 @@ jobs:
         # npm limits how fast new packages can be created, so publishes are
         # spaced out and a rate-limited publish is retried after a pause.
         # Versions that already exist are skipped, so a rerun resumes.
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        # No token: npm trusted publishing authenticates this workflow through
+        # GitHub's OIDC token (id-token: write above), and adds provenance.
         shell: bash
         run: |
           # pipefail: a failed npm publish must not be hidden by the tee below.
