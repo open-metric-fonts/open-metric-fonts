@@ -160,7 +160,7 @@ Release zips are built by GitHub Actions from the tagged commit, with a signed b
 
 ```bash
 sha256sum -c SHA256SUMS.txt --ignore-missing
-gh attestation verify open-metric-fonts-1.0.1.zip --repo open-metric-fonts/open-metric-fonts
+gh attestation verify open-metric-fonts-1.1.0.zip --repo open-metric-fonts/open-metric-fonts
 ```
 
 npm packages are published with npm provenance, shown on each package's npm page.
